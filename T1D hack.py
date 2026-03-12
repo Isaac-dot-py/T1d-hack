@@ -20,10 +20,10 @@ button_map = {
     "C1": "XUSB_GAMEPAD_BACK",
     "C2": "XUSB_GAMEPAD_START",
     "MENU": "XUSB_GAMEPAD_GUIDE",
-    "Down": "XUSB_GAMEPAD_DPAD_DOWN",
-    "Up": "XUSB_GAMEPAD_DPAD_UP",
-    "Left": "XUSB_GAMEPAD_DPAD_LEFT",
-    "Right": "XUSB_GAMEPAD_DPAD_RIGHT",
+    "down": "XUSB_GAMEPAD_DPAD_DOWN",
+    "up": "XUSB_GAMEPAD_DPAD_UP",
+    "left": "XUSB_GAMEPAD_DPAD_LEFT",
+    "right": "XUSB_GAMEPAD_DPAD_RIGHT",
 }
 
 
@@ -40,16 +40,16 @@ async def main():
         C1,
         C2,
         MENU,
-        Down,
-        Up,
-        Left,
-        Right,
+        down,
+        up,
+        left,
+        right,
         LX,
         LY,
         RX,
         RY,
     ] = [-1 for _ in range(19)]
-    prev_states = {button: False for button in button_map}
+    prev_states = dict.fromkeys(button_map, False)
     gamepad = vgamepad.VX360Gamepad()
     try:
         async with bleak.BleakClient(MAC_ADDRESS) as T1D:
@@ -74,15 +74,38 @@ async def main():
                 C2 = bool(state[10] & 0x08)
                 MENU = bool(state[9] & 0x04)
 
-                Down = bool(state[11] == 0x05)
-                Up = bool(state[11] == 0x01)
-                Left = bool(state[11] == 0x07)
-                Right = bool(state[11] == 0x03)
+                match state[11]:
+                    case 0:
+                        up = down = left = right = False
+                    case 1:
+                        up = True
+                        down = left = right = False
+                    case 2:
+                        up = right = True
+                        down = left = False
+                    case 3:
+                        right = True
+                        up = left = down = False
+                    case 4:
+                        down = right = True
+                        up = left = False
+                    case 5:
+                        down = True
+                        up = left = right = False
+                    case 6:
+                        down = left = True
+                        up = right = False
+                    case 7:
+                        left = True
+                        up = right = down = False
+                    case 8:
+                        up = left = True
+                        down = right = False
 
                 LX = int(((state[2]) << 2) | (state[3] >> 6))
                 LY = int(((state[3] & 0x3F) << 4) + (state[4] >> 4))
                 RX = int(((state[4] & 0xF) << 6) | (state[5] >> 2))
-                RY = int(((state[5] & 0x3) << 8) + ((state[6])))
+                RY = int(((state[5] & 0x3) << 8) + (state[6]))
 
                 # Check for button presses/releases
                 for button, gamepad_button in button_map.items():
